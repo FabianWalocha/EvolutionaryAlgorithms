@@ -1,70 +1,41 @@
-# devtools::install_github('IOHprofiler/IOHexperimenter@R')
+devtools::install_github('IOHprofiler/IOHexperimenter@R')
 library('IOHexperimenter')
 
 
-# function IOH_walocha_dijkstra_GA(IOHproblem) {
-# 	walocha_dijkstra_GA(IOHproblem$dimension, IOHproblem$obj_func, 
-#                    target = IOHproblem$fopt, budget = budget,
-#                    lambda_ = lambda_, mu_ = mu_, 
-#                    set_parameters = IOHproblem$set_parameters)
-# }
-# 
-# 
-# function walocha_dijkstra_GA(dimension, obj_func, 
-# 							 target = NULL, lambda_ = 100, mu_ = 15,  
-# 							 budget = NULL, set_parameters = NULL) {
-# 
-# 
-# 	parents = initialize()
-# 
-# 	while(budget>0) {
-# 		if(budget>mu_){
-# 			offsprings <- mating_selection(parents)
-# 
-# 		}
-# 		budget <- budget - lambda_
-# 		
-# 	}
-# 
-# 
-# 
-# 	function initialize(){
-# 		sapply(1:dimension, function(x) sample(c(0,1),mu_, replace=TRUE));
-# 	}
-# 
-# 	function mutate(mutation_rate){
-# 
-# 	}
-# 
-# 
-# 	function crossover(crossover_rate){
-# 
-# 	}
-# 
-# 	function mating_selection(parents) {
-# 		fun_eval = apply(parents,fopt)
-# 		return(offsprings[order(fun_eval)]
-# 	}
-# }
-
 genetic_algorithm <- function(IOHproblem){
 
-  target_hit <- function(f) {
-    return(any(f>=IOHproblem$fopt))
-  }
+  target_hit <- function(f, IOHproblem) return(any(f>=IOHproblem$fopt));
+  
+  decode <- function(P) return(P); 
+  
+  evaluate <- function(G, IOHproblem) return(IOHproblem$obj_func(G));  
   
   select <- function(f, index){
-    if(!is.na(index)){
-      f = f[-index];
-    }
+    # What if values are negative -> push to positive!
+    f = f - min(f)+1.0001;
+    # What if values are super big -> log transformationS
+    f = log(f);
+    
     old_idxs = 1:length(f);
-    new_idxs = order(f, decreasing=TRUE);
-    old_idxs = old_idxs[new_idxs];
-    f = f[new_idxs];
+    #new_idxs = order(f, decreasing=TRUE);
+    #old_idxs = old_idxs[new_idxs];
+    #f = f[new_idxs];
     f = f/sum(f);
     f = cumsum(f);
-    winner = which(f>runif(1))[1];
-    return(old_idxs[winner]);
+    sel_res = which(f>runif(1));
+    if(!is.na(index)){
+      if(index == sel_res[1]){
+        winner = sel_res[2]
+      } else {
+        winner = sel_res[1];
+      }
+    } else{
+      winner = sel_res[1];
+    }
+    if(is.na(winner)){
+      winner = sample(1:length(f), 1)
+    }
+    return(winner);
   }
   
   crossover <- function(p1, p2){
@@ -91,14 +62,10 @@ genetic_algorithm <- function(IOHproblem){
     )
   }
   
-  decode <- function(P){
-    return(P);
-  }
-  
-  evaluate <- function(G, IOHproblem) {
-    return(IOHproblem$obj_func(G));  
-  }
 
+  ###################################################### Check what IOHproblem$obj_func is
+  
+  
   mu = 10;
   pc = .7;
   pm = .01;
@@ -106,11 +73,15 @@ genetic_algorithm <- function(IOHproblem){
   n = IOHproblem$dimension;
   fopt = -Inf;
   
+  IOHproblem$set_parameters(pm);
+  
   xopt = matrix(data=NA, nrow=mu, ncol=1);
   
   P = matrix(data=NA, nrow=mu, ncol=n);
   G = matrix(data=NA, nrow=mu, ncol=n);
   f = rep.int(NA,mu);
+  
+  print(IOHproblem$obj_func);
   
   evalcount = 0;
   for(i in 1:mu){
@@ -119,12 +90,13 @@ genetic_algorithm <- function(IOHproblem){
     f[i] = evaluate(G[i,], IOHproblem)
     evalcount = evalcount + 1;
   }
-  
+
   # Evolution loop
   
   Pnew = matrix(data=NA, nrow=mu, ncol=n);
-  while(evalcount<budget && !target_hit(f)){
+  while(evalcount<budget && !target_hit(f, IOHproblem)){
     for(i in 1:mu){
+      #select the first parent based on their fitness
       p1 = select(f, NA);
       if(runif(1) < pc) {
         p2 = select(f, p1);
@@ -147,13 +119,8 @@ genetic_algorithm <- function(IOHproblem){
         xopt = P[order(f,decreasing = TRUE)[1],]
       }
     }
-    
   }
-  
 }
 
-# TODO: what does selection look like? OK
-# TODO: How to decode genome? OK
-# TODO: How to do evaluation?
 
-
+benchmark_algorithm(user_alg=genetic_algorithm, instances=c(1),dimensions=c(100), functions=seq(23), data.dir='./data/', params.track = 'pm')
