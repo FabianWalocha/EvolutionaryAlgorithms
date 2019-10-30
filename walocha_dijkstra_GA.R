@@ -1,6 +1,9 @@
 devtools::install_github('IOHprofiler/IOHexperimenter@R')
 library('IOHexperimenter')
 
+mu = 5;
+pc = .6;
+pm = .001;
 
 genetic_algorithm <- function(IOHproblem){
 
@@ -15,11 +18,6 @@ genetic_algorithm <- function(IOHproblem){
     f = f - min(f)+1.0001;
     # What if values are super big -> log transformationS
     f = log(f);
-    
-    old_idxs = 1:length(f);
-    #new_idxs = order(f, decreasing=TRUE);
-    #old_idxs = old_idxs[new_idxs];
-    #f = f[new_idxs];
     f = f/sum(f);
     f = cumsum(f);
     sel_res = which(f>runif(1));
@@ -65,10 +63,6 @@ genetic_algorithm <- function(IOHproblem){
 
   ###################################################### Check what IOHproblem$obj_func is
   
-  
-  mu = 10;
-  pc = .7;
-  pm = .01;
   budget = 50000;
   n = IOHproblem$dimension;
   fopt = -Inf;
@@ -80,8 +74,6 @@ genetic_algorithm <- function(IOHproblem){
   P = matrix(data=NA, nrow=mu, ncol=n);
   G = matrix(data=NA, nrow=mu, ncol=n);
   f = rep.int(NA,mu);
-  
-  print(IOHproblem$obj_func);
   
   evalcount = 0;
   for(i in 1:mu){
@@ -122,5 +114,13 @@ genetic_algorithm <- function(IOHproblem){
   }
 }
 
+benchmark_algorithm(user_alg=genetic_algorithm,
+                    instances=c(1),
+                    dimensions=c(100), 
+                    functions=c(1), 
+                    data.dir='./data/', 
+                    params.track = 'pm',
+                    algorithm.name = paste('GA-(',mu,',',mu,'),',pm,',',pc, sep = ""), 
+                    algorithm.info = paste('(',mu,',',mu,') genetic algorithm, pm=',pm,'pc=',pc,sep = ""))
 
-benchmark_algorithm(user_alg=genetic_algorithm, instances=c(1),dimensions=c(100), functions=seq(23), data.dir='./data/', params.track = 'pm')
+
