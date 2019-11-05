@@ -3,10 +3,12 @@ rm(list = ls())
 
 devtools::install_github('IOHprofiler/IOHexperimenter@R')
 library('IOHexperimenter')
+library('sigmoid')
 
-mu = 100;
-pc = .95;
-pm = 1/mu;
+
+mu = 6;
+pc = .7;
+pm = .001;
 
 
 genetic_algorithm <- function(IOHproblem){
@@ -41,6 +43,7 @@ genetic_algorithm <- function(IOHproblem){
   }
   
   crossover <- function(p1, p2){
+    
     # we want to randomize the child we 'keep' 
     if(sample(0:1,1)){
       help = p1;
@@ -49,8 +52,10 @@ genetic_algorithm <- function(IOHproblem){
     }
     
     n = length(p1)
-    crossoverpoint = sample(1:(n-1),1);
-    return(c(p1[1:crossoverpoint],p2[(crossoverpoint+1):n])) # swap the tails of the parents at the crossover point
+    crossoverpoints = sort(sample(1:(n-1),2));
+    return(c(p1[1:crossoverpoints[1]],
+             p2[(crossoverpoints[1]+1):crossoverpoints[2]],
+             p1[(crossoverpoints[2]+1):n])) # swap the tails of the parents at the crossover point
   }
   
   mutate <- function(p,pm){
@@ -123,5 +128,5 @@ benchmark_algorithm(user_alg=genetic_algorithm,
                     functions=seq(23), 
                     data.dir='./data/', 
                     params.track = 'pm',
-                    algorithm.name = paste('GA-(',mu,',',mu,'),',pm,',',pc, sep = ""), 
-                    algorithm.info = paste('(',mu,',',mu,') genetic algorithm, pm=',pm,'pc=',pc,sep = ""))
+                    algorithm.name = paste('GA-(',mu,',',mu,'),',pm,',',pc,'2p', sep = ""), 
+                    algorithm.info = paste('(',mu,',',mu,') genetic algorithm, pm=',pm,'pc=',pc,'2p',sep = ""))

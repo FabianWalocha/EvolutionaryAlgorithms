@@ -3,10 +3,15 @@ rm(list = ls())
 
 devtools::install_github('IOHprofiler/IOHexperimenter@R')
 library('IOHexperimenter')
+library('sigmoid')
 
-mu = 100;
-pc = .95;
-pm = 1/mu;
+
+mu = 6;
+pc = .7;
+pm_fac = 0;
+pm = sigmoid(pm_fac/100-7);
+epsilon = 1.01;
+
 
 
 genetic_algorithm <- function(IOHproblem){
@@ -91,6 +96,7 @@ genetic_algorithm <- function(IOHproblem){
   # Evolution loop
   Pnew = matrix(data=NA, nrow=mu, ncol=n); # Offspring/children population
   while(evalcount<budget && !target_hit(f, IOHproblem)){
+    pm = sigmoid(pm_fac/100-7)
     for(i in 1:mu){
       #select the first parent based on their fitness
       p1 = select(f, NA);
@@ -109,9 +115,15 @@ genetic_algorithm <- function(IOHproblem){
       G[i,] = encode(P[i,]);
       f[i] = evaluate(G[i,], IOHproblem);
       # Do we have an offspring which has a better fitness than any other before?
+      foptold = fopt
       if(any(f>fopt)){
         fopt = max(f);
         xopt = P[order(f,decreasing = TRUE)[1],]
+      }
+      if(fopt/foptold<epsilon) {
+        pm_fac <- min(pm_fac+1,700);
+      } else {
+        pm_fac <- 0;
       }
     }
   }
@@ -123,5 +135,5 @@ benchmark_algorithm(user_alg=genetic_algorithm,
                     functions=seq(23), 
                     data.dir='./data/', 
                     params.track = 'pm',
-                    algorithm.name = paste('GA-(',mu,',',mu,'),',pm,',',pc, sep = ""), 
-                    algorithm.info = paste('(',mu,',',mu,') genetic algorithm, pm=',pm,'pc=',pc,sep = ""))
+                    algorithm.name = paste('GA-(',mu,',',mu,'),adaptive,',pc, sep = ""), 
+                    algorithm.info = paste('(',mu,',',mu,') genetic algorithm, pm=adaptive, pc=',pc,sep = ""))
