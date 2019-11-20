@@ -1,3 +1,6 @@
+### Genetic Algorithm - Classic approach -- 1-point crossover
+
+# Set working directory
 setwd("~/Documents/R Projects/EvolutionaryAlgorithms/")
 rm(list = ls())
 
@@ -100,13 +103,13 @@ genetic_algorithm <- function(IOHproblem){
       xopt = P[order(f,decreasing = TRUE)[1],]
     }
   }
-  print(c('evaluations:',evalcount,'Optimality:',(IOHproblem$fopt-fopt)))
 }
 
 benchmark_algorithm(user_alg=genetic_algorithm,
                     instances=c(1),
                     dimensions=c(100), 
                     functions=seq(23), 
+                    repetitions = 20,
                     data.dir='./data/', 
                     params.track = 'pm',
                     algorithm.name = paste('GA-(',mu,',',mu,'),',pm,',',pc, sep = ""), 
