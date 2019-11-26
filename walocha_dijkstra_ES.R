@@ -7,10 +7,21 @@ rm(list = ls())
 devtools::install_github('IOHprofiler/IOHexperimenter@R-restructure')
 library('IOHexperimenter')
 
-mu = 15; #number of parents
-rho = 10;
-lambda = 100; #size of offspring
+mu = 3; #number of parents
+rho = 3;
+lambda = 20; #size of offspring
 sigma <<- 0;
+discrete=TRUE;
+local = TRUE;
+use_cor = FALSE;
+use_plus = TRUE;
+
+if(use_plus){
+  alg_name = paste('ES-(',mu,'+',lambda-mu,')',sep="")
+}else{
+  alg_name = paste('ES-(',mu,'-',lambda,')', sep = "")
+}
+
 
 evolutionary_strategy <- function(IOHproblem){
   
@@ -31,8 +42,14 @@ evolutionary_strategy <- function(IOHproblem){
     return(order(f)[seq(mu)]); #return indices of best
   }
     
-  recombine <- function(P, f, lambda, rho, discrete=FALSE, local=FALSE){ ## add local
+  recombine <- function(P, f, lambda, rho, discrete=FALSE, use_plus=FALSE){ ## add local
+    if(is.null(dim(P))){
+      P = t(P);
+    }
     mu = dim(P)[1];
+    if(use_plus){
+      lambda = lambda - mu;
+    }
     offsprings = matrix(seq(lambda*dim(P)[2]), nrow=lambda)
     if(rho==mu){
       Psel = P;
@@ -106,18 +123,24 @@ evolutionary_strategy <- function(IOHproblem){
   # Evolution loop
   
   while(evalcount<=(budget-lambda) && !target_hit(f, IOHproblem)){
-    Prec = recombine(P, f, lambda, rho, discrete = TRUE);
+    Prec = recombine(P, f, lambda, rho, discrete = TRUE, use_plus = FALSE);
     Pmut = mutate(Prec, tau);
-    f = evaluate(Pmut,IOHproblem); # mu komma lambda selection?
-    idxs = select(f,  mu);
-    Pnew = Pmut[idxs];
+    if(use_plus){
+      Pmut = rbind(Pmut, P)
+    }
+    f = evaluate(Pmut,IOHproblem); 
+    idxs = select(f,  mu); # mu komma lambda selection?
+    P = Pmut[idxs,];
     f = f[idxs];
     if(any(f<fopt)){
       fopt = min(f);
+      if(is.null(dim(P))){
+        P = t(P);
+      }
       xopt = P[order(f)[1],];
     }
   }
-  print(paste(min(c(fopt,f))-IOHproblem$fopt, evalcount))
+  print(paste(min(c(fopt,f))-IOHproblem$fopt, evalcount));
 }
 
 
@@ -129,5 +152,5 @@ benchmark_algorithm(user_alg=evolutionary_strategy,
                     suite="BBOB",
                     data.dir='./data/es/', 
                     params.track = 'sigma',
-                    algorithm.name = paste('ES-(',mu,'-',lambda,')', sep = ""), 
+                    algorithm.name = alg_name, 
                     algorithm.info = paste('(',mu,'-',lambda,') evolutionary strategy',sep = ""))
