@@ -4,24 +4,25 @@
 setwd("~/Documents/R Projects/EvolutionaryAlgorithms/")
 rm(list = ls())
 
-devtools::install_github('IOHprofiler/IOHexperimenter@R-restructure')
+devtools::install_github('IOHprofiler/IOHexperimenter@R')
 library('IOHexperimenter')
 
-mu = 3; #number of parents
-rho = 3;
-lambda = 20; #size of offspring
-sigma <<- 0;
+mu = 15; #number of parents
+rho = 15;
+lambda = 100; #size of offspring
+sig <<- 0;
 discrete=TRUE;
 local = TRUE;
 use_cor = FALSE;
 use_plus = TRUE;
 
 if(use_plus){
-  alg_name = paste('ES-(',mu,'+',lambda-mu,')',sep="")
+  alg_name = paste('ES-(',mu,'+',lambda-mu,')disc',sep="")
 }else{
   alg_name = paste('ES-(',mu,'-',lambda,')', sep = "")
 }
 
+print(alg_name)
 
 evolutionary_strategy <- function(IOHproblem){
   
@@ -42,14 +43,11 @@ evolutionary_strategy <- function(IOHproblem){
     return(order(f)[seq(mu)]); #return indices of best
   }
     
-  recombine <- function(P, f, lambda, rho, discrete=FALSE, use_plus=FALSE){ ## add local
+  recombine <- function(P, f, lambda, rho, discrete=FALSE){ ## add local
     if(is.null(dim(P))){
       P = t(P);
     }
     mu = dim(P)[1];
-    if(use_plus){
-      lambda = lambda - mu;
-    }
     offsprings = matrix(seq(lambda*dim(P)[2]), nrow=lambda)
     if(rho==mu){
       Psel = P;
@@ -80,13 +78,16 @@ evolutionary_strategy <- function(IOHproblem){
   }
   
   mutate <- function(P, tau, use_corr=FALSE,adapt=FALSE){
-    if(length(sigma)>1){ # change boolean to global and local instead?
+    if(length(sig)>1){ # change boolean to global and local instead?
       rv_global = rnorm(1)
-      assign("sigma", sigma * exp(tau[1]*rv_global+tau[2]*rnorm(length(sigma))), envir=.GlobalEnv); # update all sigma's
-      P = apply(P,2, function(x) x+sigma*rnorm(length(sigma))) # do mutation with stepsize sigma # can go out if statement?
+      assign("sig", sig * exp(tau[1]*rv_global+tau[2]*rnorm(length(sig))), envir=.GlobalEnv); # update all sigma's
+      P = apply(P,2, function(x) x+sig*rnorm(length(sig))) # do mutation with stepsize sigma # can go out if statement?
     } else {
-      assign("sigma", sigma*exp(tau*rnorm(1)), envir=.GlobalEnv); # update only the global sigma
-      P = apply(P,2, function(x) x+sigma*rnorm(length(sigma))) # do mutation with stepsize sigma
+      assign("sig", sig*exp(tau*rnorm(1)), envir=.GlobalEnv); # update only the global sigma
+      P = apply(P,2, function(x) x+sig*rnorm(length(sig))) # do mutation with stepsize sigma
+    }
+    if(is.null(dim(P))){
+      P = t(P);
     }
     P = apply(P, c(1,2), function(x) min(max(x,-5),5)) # bound the possible values between -5 and 5
     return(P)  
@@ -109,10 +110,10 @@ evolutionary_strategy <- function(IOHproblem){
   # sigma is the mutation step size coevolving with x
   sigmaValue <- mean(abs(f-IOHproblem$fopt)/sqrt(n))
   # sigmaValue <- abs(f-IOHproblem$fopt)/sqrt(n);
-  assign("sigma", sigmaValue, envir=.GlobalEnv); #update the sigma globally
+  assign("sig", sigmaValue, envir=.GlobalEnv); #update the sigma globally
   
   # tau is the learning rate
-  if(length(sigma)>1){ # if we have individual mutation step sizes 
+  if(length(sig)>1){ # if we have individual mutation step sizes 
     tau = c(1/sqrt(2*n), 1/sqrt(2*sqrt(n))); # we have a global and coordinate wise learning rate
   } else { # if we have a global mutation step size
     tau = 1/sqrt(n); 
@@ -123,7 +124,7 @@ evolutionary_strategy <- function(IOHproblem){
   # Evolution loop
   
   while(evalcount<=(budget-lambda) && !target_hit(f, IOHproblem)){
-    Prec = recombine(P, f, lambda, rho, discrete = TRUE, use_plus = FALSE);
+    Prec = recombine(P, f, lambda, rho, discrete = discrete);
     Pmut = mutate(Prec, tau);
     if(use_plus){
       Pmut = rbind(Pmut, P)
@@ -146,11 +147,9 @@ evolutionary_strategy <- function(IOHproblem){
 
 benchmark_algorithm(user_alg=evolutionary_strategy,
                     instances=seq(5),
-                    dimensions=c(2), 
+                    dimensions=c(2,5,20), 
                     functions=seq(24),
                     repetitions = 5,
                     suite="BBOB",
                     data.dir='./data/es/', 
-                    params.track = 'sigma',
-                    algorithm.name = alg_name, 
-                    algorithm.info = paste('(',mu,'-',lambda,') evolutionary strategy',sep = ""))
+                    algorithm.name = alg_name)
