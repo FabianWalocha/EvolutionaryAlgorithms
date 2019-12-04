@@ -11,13 +11,12 @@ mu = 15; #number of parents
 rho = 15;
 lambda = 100; #size of offspring
 sig <<- 0;
-discrete=TRUE;
-local = TRUE;
-use_cor = FALSE;
+discrete=FALSE;
 use_plus = TRUE;
+n_sig = FALSE;
 
 if(use_plus){
-  alg_name = paste('ES-(',mu,'+',lambda-mu,')disc',sep="")
+  alg_name = paste('ES-(',mu,'+',lambda,')',sep="")
 }else{
   alg_name = paste('ES-(',mu,'-',lambda,')', sep = "")
 }
@@ -43,8 +42,9 @@ evolutionary_strategy <- function(IOHproblem){
     return(order(f)[seq(mu)]); #return indices of best
   }
     
-  recombine <- function(P, f, lambda, rho, discrete=FALSE){ ## add local
+  recombine <- function(P, f, lambda, rho, discrete=FALSE){
     if(is.null(dim(P))){
+      # If 1 parent vector has dim NULL -> transform into 1xn matrix 
       P = t(P);
     }
     mu = dim(P)[1];
@@ -63,8 +63,6 @@ evolutionary_strategy <- function(IOHproblem){
     } else {
       rho_rand = matrix(seq(rho*lambda), nrow= lambda)
       rho_rand = t(apply(rho_rand,1,function(x) sample(mu,rho)))
-      # rho_best = order(f)[seq(rho)]; # I dont think it should be ordered, but random selection?
-      # Psel = P[rho_best,];
       for(idx in seq(lambda)){
         Psel = P[rho_rand[idx,],]
         if(discrete){ # each feature is a copy of one of the parents
@@ -77,7 +75,7 @@ evolutionary_strategy <- function(IOHproblem){
     }
   }
   
-  mutate <- function(P, tau, use_corr=FALSE,adapt=FALSE){
+  mutate <- function(P, tau){
     if(length(sig)>1){ # change boolean to global and local instead?
       rv_global = rnorm(1)
       assign("sig", sig * exp(tau[1]*rv_global+tau[2]*rnorm(length(sig))), envir=.GlobalEnv); # update all sigma's
@@ -108,8 +106,11 @@ evolutionary_strategy <- function(IOHproblem){
   f = evaluate(P,IOHproblem); # fitness values of the population
   
   # sigma is the mutation step size coevolving with x
-  sigmaValue <- mean(abs(f-IOHproblem$fopt)/sqrt(n))
-  # sigmaValue <- abs(f-IOHproblem$fopt)/sqrt(n);
+  if(n_sig){
+    sigmaValue <- abs(f-IOHproblem$fopt)/sqrt(n);
+  }else{
+    sigmaValue <- mean(abs(f-IOHproblem$fopt)/sqrt(n))
+  }
   assign("sig", sigmaValue, envir=.GlobalEnv); #update the sigma globally
   
   # tau is the learning rate
@@ -130,7 +131,7 @@ evolutionary_strategy <- function(IOHproblem){
       Pmut = rbind(Pmut, P)
     }
     f = evaluate(Pmut,IOHproblem); 
-    idxs = select(f,  mu); # mu komma lambda selection?
+    idxs = select(f,  mu);
     P = Pmut[idxs,];
     f = f[idxs];
     if(any(f<fopt)){
@@ -152,4 +153,5 @@ benchmark_algorithm(user_alg=evolutionary_strategy,
                     repetitions = 5,
                     suite="BBOB",
                     data.dir='./data/es/', 
-                    algorithm.name = alg_name)
+                    algorithm.name = alg_name,
+                    algorithm.info = alg_name)
